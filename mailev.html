@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EarnViator — Mail Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  :root {
+    --red:#e63946; --orange:#f4a261; --green:#2ec27e; --blue:#4cc9f0;
+    --bg:#0b0c10; --bg2:#13141a; --bg3:#1c1d26; --bg4:#22232f;
+    --border:rgba(255,255,255,0.07); --text:#e8e8f0; --muted:#6b7080;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden}
+
+  /* ── BACKGROUND GRID ── */
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 60px,rgba(76,201,240,0.025) 60px,rgba(76,201,240,0.025) 61px),
+               repeating-linear-gradient(90deg,transparent,transparent 80px,rgba(76,201,240,0.025) 80px,rgba(76,201,240,0.025) 81px);
+    pointer-events:none;z-index:0;
+  }
+
+  /* ── AUTH ── */
+  #auth-overlay{
+    position:fixed;inset:0;background:rgba(11,12,16,0.97);
+    display:flex;align-items:center;justify-content:center;z-index:999;padding:20px;
+  }
+  .auth-box{
+    background:var(--bg2);border:1px solid rgba(76,201,240,0.2);
+    border-radius:20px;padding:40px 36px;width:100%;max-width:380px;
+    box-shadow:0 0 60px rgba(76,201,240,0.07);position:relative;
+  }
+  .auth-box::before{
+    content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);
+    border-radius:2px;
+  }
+  .auth-title{
+    font-family:'Orbitron',sans-serif;font-size:18px;text-align:center;
+    margin-bottom:4px;color:var(--blue);letter-spacing:2px;
+  }
+  .auth-sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:28px}
+  .form-group{margin-bottom:16px}
+  .form-label{font-size:11px;color:var(--muted);letter-spacing:1.5px;font-weight:700;display:block;margin-bottom:7px}
+  .form-input{
+    width:100%;padding:12px 14px;background:var(--bg3);
+    border:1px solid var(--border);border-radius:10px;
+    color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;
+    outline:none;transition:border .2s;
+  }
+  .form-input:focus{border-color:rgba(76,201,240,0.4)}
+  .btn-auth{
+    width:100%;padding:14px;
+    background:linear-gradient(135deg,#0a4a6b,#0e7490);
+    border:1px solid rgba(76,201,240,0.3);border-radius:10px;
+    color:#fff;font-family:'Orbitron',sans-serif;
+    font-size:13px;font-weight:700;letter-spacing:2px;cursor:pointer;
+    transition:all .2s;margin-top:4px;
+  }
+  .btn-auth:hover{box-shadow:0 0 20px rgba(76,201,240,0.2);border-color:rgba(76,201,240,0.5)}
+  .error-msg{
+    background:rgba(230,57,70,0.12);border:1px solid rgba(230,57,70,0.3);
+    color:#ff6b7a;padding:10px 14px;border-radius:8px;
+    font-size:13px;margin-bottom:14px;display:none;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;height:60px;
+    background:rgba(13,14,20,0.95);
+    border-bottom:1px solid rgba(76,201,240,0.1);
+    backdrop-filter:blur(12px);
+  }
+  .topbar-left{display:flex;align-items:center;gap:16px}
+  .topbar-logo{
+    font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;
+    color:var(--blue);letter-spacing:2px;
+  }
+  .topbar-divider{width:1px;height:22px;background:var(--border)}
+  .topbar-title{
+    font-family:'Orbitron',sans-serif;font-size:13px;
+    color:var(--muted);letter-spacing:1.5px;
+  }
+  .topbar-badge{
+    background:rgba(76,201,240,0.1);border:1px solid rgba(76,201,240,0.25);
+    color:var(--blue);padding:4px 12px;border-radius:20px;
+    font-size:11px;font-weight:700;letter-spacing:1px;
+  }
+  .topbar-right{display:flex;align-items:center;gap:10px}
+  .from-pill{
+    display:flex;align-items:center;gap:7px;
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:20px;padding:6px 14px;font-size:12px;
+  }
+  .from-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+  .from-addr{color:var(--muted);font-weight:600}
+  .from-addr span{color:var(--text)}
+  .logout-btn{
+    padding:7px 16px;background:transparent;border:1px solid var(--border);
+    color:var(--muted);cursor:pointer;border-radius:8px;
+    font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;transition:all .2s;
+  }
+  .logout-btn:hover{color:var(--red);border-color:var(--red)}
+
+  /* ── LAYOUT ── */
+  .layout{
+    display:grid;grid-template-columns:280px 1fr;
+    min-height:calc(100vh - 60px);position:relative;z-index:1;
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel{
+    background:var(--bg2);border-right:1px solid var(--border);
+    padding:24px 0;display:flex;flex-direction:column;gap:4px;
+  }
+  .panel-section-label{
+    font-size:10px;color:var(--muted);letter-spacing:2px;font-weight:700;
+    padding:8px 22px 6px;
+  }
+  .nav-btn{
+    display:flex;align-items:center;gap:12px;
+    padding:12px 22px;cursor:pointer;color:var(--muted);
+    font-size:14px;font-weight:600;letter-spacing:.3px;
+    transition:all .2s;border-left:3px solid transparent;
+    position:relative;
+  }
+  .nav-btn:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+  .nav-btn.active{color:var(--blue);border-left-color:var(--blue);background:rgba(76,201,240,0.06)}
+  .nav-btn .nav-icon{font-size:16px;width:20px;text-align:center}
+  .nav-btn .nav-count{
+    margin-left:auto;background:rgba(230,57,70,.2);border:1px solid rgba(230,57,70,.3);
+    color:var(--red);font-size:10px;font-weight:900;
+    padding:2px 7px;border-radius:10px;
+  }
+  .nav-btn .nav-count.blue{background:rgba(76,201,240,.15);border-color:rgba(76,201,240,.3);color:var(--blue)}
+
+  .stats-mini{margin:16px 16px 8px;display:flex;flex-direction:column;gap:8px}
+  .stat-mini-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;background:var(--bg3);border-radius:10px;
+    border:1px solid var(--border);
+  }
+  .stat-mini-label{font-size:12px;color:var(--muted);font-weight:600}
+  .stat-mini-val{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:var(--orange)}
+
+  /* ── RIGHT PANEL ── */
+  .right-panel{padding:28px 32px;overflow-y:auto}
+  .view{display:none}
+  .view.active{display:block}
+
+  /* ── COMPOSE ── */
+  .compose-card{
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:16px;overflow:hidden;
+    box-shadow:0 4px 40px rgba(0,0,0,.3);
+  }
+  .compose-header{
+    padding:18px 24px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .compose-header-title{
+    font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;
+    color:var(--blue);letter-spacing:1px;
+  }
+  .compose-body{padding:24px}
+
+  .field-row{margin-bottom:18px}
+  .field-label{
+    font-size:11px;color:var(--muted);letter-spacing:1.5px;
+    font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;
+  }
+  .field-required{color:var(--red);font-size:10px}
+  .field-input{
+    width:100%;padding:12px 16px;background:var(--bg3);
+    border:1px solid var(--border);border-radius:10px;
+    color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;
+    outline:none;transition:border .2s;
+  }
+  .field-input:focus{border-color:rgba(76,201,240,0.35)}
+  .field-select{
+    width:100%;padding:12px 16px;background:var(--bg3);
+    border:1px solid var(--border);border-radius:10px;
+    color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;
+    outline:none;cursor:pointer;
+  }
+  .field-textarea{
+    width:100%;padding:14px 16px;background:var(--bg3);
+    border:1px solid var(--border);border-radius:10px;
+    color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;
+    outline:none;transition:border .2s;resize:vertical;min-height:180px;line-height:1.6;
+  }
+  .field-textarea:focus{border-color:rgba(76,201,240,0.35)}
+
+  /* From field (locked) */
+  .from-field{
+    padding:12px 16px;background:var(--bg3);
+    border:1px solid var(--border);border-radius:10px;
+    display:flex;align-items:center;gap:10px;
+    color:var(--muted);font-size:14px;font-weight:600;
+  }
+  .from-lock{font-size:12px;margin-left:auto;color:var(--muted);opacity:.5}
+
+  /* To type toggle */
+  .to-type-tabs{display:flex;gap:8px;margin-bottom:12px}
+  .to-tab{
+    padding:7px 16px;border-radius:8px;cursor:pointer;
+    font-size:13px;font-weight:700;letter-spacing:.5px;
+    border:1px solid var(--border);color:var(--muted);
+    background:var(--bg3);transition:all .2s;
+  }
+  .to-tab.active{
+    background:rgba(76,201,240,0.1);border-color:rgba(76,201,240,0.35);
+    color:var(--blue);
+  }
+
+  /* Template picker */
+  .templates-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+    gap:10px;margin-bottom:20px;
+  }
+  .tpl-card{
+    padding:14px 16px;background:var(--bg3);border:1px solid var(--border);
+    border-radius:10px;cursor:pointer;transition:all .2s;
+  }
+  .tpl-card:hover{border-color:rgba(76,201,240,0.3);background:rgba(76,201,240,0.04)}
+  .tpl-card.selected{border-color:var(--blue);background:rgba(76,201,240,0.08)}
+  .tpl-icon{font-size:22px;margin-bottom:6px}
+  .tpl-name{font-size:13px;font-weight:700;color:var(--text)}
+  .tpl-desc{font-size:11px;color:var(--muted);margin-top:3px}
+
+  /* Send button */
+  .send-row{display:flex;align-items:center;justify-content:space-between;margin-top:20px;flex-wrap:wrap;gap:12px}
+  .send-btn{
+    display:flex;align-items:center;gap:10px;
+    padding:14px 32px;
+    background:linear-gradient(135deg,#0a4a6b,#0e7490);
+    border:1px solid rgba(76,201,240,0.35);border-radius:11px;
+    color:#fff;font-family:'Orbitron',sans-serif;
+    font-size:13px;font-weight:700;letter-spacing:1.5px;
+    cursor:pointer;transition:all .25s;
+  }
+  .send-btn:hover{box-shadow:0 0 28px rgba(76,201,240,0.25);transform:translateY(-1px)}
+  .send-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+  .send-btn .btn-icon{font-size:16px;transition:transform .2s}
+  .send-btn:hover .btn-icon{transform:translateX(4px)}
+  .send-info{font-size:12px;color:var(--muted)}
+  .send-info span{color:var(--orange);font-weight:700}
+
+  /* ── SENT LOG ── */
+  .sent-header{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:20px;
+  }
+  .sent-title{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;letter-spacing:1px}
+  .clear-btn{
+    padding:7px 16px;background:transparent;
+    border:1px solid rgba(230,57,70,.3);color:var(--red);
+    border-radius:8px;cursor:pointer;font-family:'Rajdhani',sans-serif;
+    font-size:13px;font-weight:700;transition:all .2s;
+  }
+  .clear-btn:hover{background:rgba(230,57,70,.1)}
+
+  .mail-item{
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:12px;padding:18px 20px;margin-bottom:10px;
+    transition:border .2s;cursor:default;
+  }
+  .mail-item:hover{border-color:rgba(76,201,240,0.15)}
+  .mail-item-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
+  .mail-to{font-weight:700;font-size:14px;color:var(--text)}
+  .mail-type-badge{
+    font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;
+    white-space:nowrap;flex-shrink:0;
+  }
+  .badge-broadcast{background:rgba(244,162,97,.15);border:1px solid rgba(244,162,97,.3);color:var(--orange)}
+  .badge-single{background:rgba(76,201,240,.12);border:1px solid rgba(76,201,240,.25);color:var(--blue)}
+  .mail-subject{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px}
+  .mail-preview{font-size:13px;color:var(--muted);line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .mail-meta{display:flex;align-items:center;gap:14px;margin-top:10px;font-size:11px;color:var(--muted)}
+  .mail-status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px}
+
+  .empty-sent{
+    text-align:center;padding:60px 20px;color:var(--muted);
+  }
+  .empty-sent .empty-icon{font-size:48px;margin-bottom:12px;opacity:.4}
+  .empty-sent p{font-size:14px}
+
+  /* ── SENDING OVERLAY ── */
+  #sending-overlay{
+    position:fixed;inset:0;background:rgba(11,12,16,0.85);
+    display:none;align-items:center;justify-content:center;
+    z-index:500;backdrop-filter:blur(6px);flex-direction:column;gap:16px;
+  }
+  .sending-spinner{
+    width:56px;height:56px;border-radius:50%;
+    border:3px solid rgba(76,201,240,0.15);
+    border-top-color:var(--blue);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .sending-text{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--blue);letter-spacing:2px}
+
+  /* ── TOAST ── */
+  #toast{
+    position:fixed;bottom:28px;right:24px;z-index:9999;
+    padding:14px 22px;border-radius:11px;font-size:14px;font-weight:700;
+    color:#fff;display:none;animation:slideup .3s ease;
+    box-shadow:0 4px 30px rgba(0,0,0,.5);max-width:320px;
+  }
+  @keyframes slideup{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  ::-webkit-scrollbar{width:5px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:#2a2b35;border-radius:3px}
+
+  @media(max-width:768px){
+    .layout{grid-template-columns:1fr}
+    .left-panel{display:flex;flex-direction:row;overflow-x:auto;padding:12px;border-right:none;border-bottom:1px solid var(--border)}
+    .panel-section-label,.stats-mini{display:none}
+    .nav-btn{padding:10px 16px;border-left:none;border-bottom:3px solid transparent;white-space:nowrap}
+    .nav-btn.active{border-left-color:transparent;border-bottom-color:var(--blue)}
+    .right-panel{padding:20px 16px}
+  }
+</style>
+</head>
+<body>
+
+<!-- SENDING OVERLAY -->
+<div id="sending-overlay">
+  <div class="sending-spinner"></div>
+  <div class="sending-text" id="sending-text">SENDING MAIL…</div>
+</div>
+
+<!-- AUTH -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-title">✉ MAIL PANEL</div>
+    <div class="auth-sub">EarnViator — Authorized Admin Access</div>
+    <div id="auth-error" class="error-msg"></div>
+    <div class="form-group">
+      <label class="form-label">ADMIN USERNAME</label>
+      <input class="form-input" id="a-user" placeholder="Username" autocomplete="off"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">PASSWORD</label>
+      <input class="form-input" id="a-pass" type="password" placeholder="Password"/>
+    </div>
+    <button class="btn-auth" onclick="doAdminLogin()">ACCESS MAIL PANEL ✈</button>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">EARNVIATOR</div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-title">MAIL PANEL</div>
+    <div class="topbar-badge">✉ /mailev</div>
+  </div>
+  <div class="topbar-right">
+    <div class="from-pill">
+      <div class="from-dot"></div>
+      <div class="from-addr">From: <span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4b2524392e3b27320b2e2a39253d222a3f243965282426">[email&#160;protected]</a></span></div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">⬅ Logout</button>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT NAV -->
+  <div class="left-panel">
+    <div class="panel-section-label">COMPOSE</div>
+    <div class="nav-btn active" onclick="switchView('compose')" id="nav-compose">
+      <span class="nav-icon">✏️</span> Compose Mail
+    </div>
+
+    <div class="panel-section-label" style="margin-top:12px">HISTORY</div>
+    <div class="nav-btn" onclick="switchView('sent')" id="nav-sent">
+      <span class="nav-icon">📤</span> Sent Mails
+      <span class="nav-count blue" id="sent-count-badge">0</span>
+    </div>
+
+    <div class="stats-mini">
+      <div style="font-size:10px;color:var(--muted);letter-spacing:2px;font-weight:700;margin-bottom:4px">STATS</div>
+      <div class="stat-mini-row">
+        <div class="stat-mini-label">Total Sent</div>
+        <div class="stat-mini-val" id="stat-sent">0</div>
+      </div>
+      <div class="stat-mini-row">
+        <div class="stat-mini-label">Broadcasts</div>
+        <div class="stat-mini-val" id="stat-broadcast">0</div>
+      </div>
+      <div class="stat-mini-row">
+        <div class="stat-mini-label">Users</div>
+        <div class="stat-mini-val" id="stat-users">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <!-- COMPOSE VIEW -->
+    <div class="view active" id="view-compose">
+      <div class="compose-card">
+        <div class="compose-header">
+          <div class="compose-header-title">✉ NEW MESSAGE</div>
+          <div style="font-size:12px;color:var(--muted)">via EmailJS · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ddb3b2afb8adb1a49db8bcafb3abb4bca9b2aff3beb2b0">[email&#160;protected]</a></div>
+        </div>
+        <div class="compose-body">
+
+          <!-- FROM (locked) -->
+          <div class="field-row">
+            <div class="field-label">FROM</div>
+            <div class="from-field">
+              <div class="from-dot" style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0"></div>
+              EarnViator &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f59b9a879085998cb59094879b839c94819a87db969a98">[email&#160;protected]</a>&gt;
+              <span class="from-lock">🔒 LOCKED</span>
+            </div>
+          </div>
+
+          <!-- TO TYPE -->
+          <div class="field-row">
+            <div class="field-label">SEND TO <span class="field-required">*</span></div>
+            <div class="to-type-tabs">
+              <div class="to-tab active" id="tab-specific" onclick="setToType('specific')">👤 Specific User</div>
+              <div class="to-tab" id="tab-broadcast" onclick="setToType('broadcast')">📢 All Users</div>
+            </div>
+            <div id="to-specific-wrap">
+              <select class="field-select" id="to-user-select">
+                <option value="">— Select a user —</option>
+              </select>
+            </div>
+            <div id="to-broadcast-wrap" style="display:none">
+              <div style="padding:12px 16px;background:rgba(244,162,97,.07);border:1px solid rgba(244,162,97,.25);border-radius:10px;font-size:13px;color:var(--orange)">
+                📢 Mail will be sent to <strong id="broadcast-count">0</strong> registered users
+              </div>
+            </div>
+          </div>
+
+          <!-- TEMPLATES -->
+          <div class="field-row">
+            <div class="field-label">QUICK TEMPLATES <span style="color:var(--muted);font-weight:400;letter-spacing:0">(optional)</span></div>
+            <div class="templates-grid">
+              <div class="tpl-card" onclick="applyTemplate('welcome')" id="tpl-welcome">
+                <div class="tpl-icon">🎉</div>
+                <div class="tpl-name">Welcome</div>
+                <div class="tpl-desc">New user greeting</div>
+              </div>
+              <div class="tpl-card" onclick="applyTemplate('coins')" id="tpl-coins">
+                <div class="tpl-icon">🪙</div>
+                <div class="tpl-name">Coins Added</div>
+                <div class="tpl-desc">Notify coin credit</div>
+              </div>
+              <div class="tpl-card" onclick="applyTemplate('warning')" id="tpl-warning">
+                <div class="tpl-icon">⚠️</div>
+                <div class="tpl-name">Warning</div>
+                <div class="tpl-desc">Policy violation</div>
+              </div>
+              <div class="tpl-card" onclick="applyTemplate('maintenance')" id="tpl-maintenance">
+                <div class="tpl-icon">🔧</div>
+                <div class="tpl-name">Maintenance</div>
+                <div class="tpl-desc">Downtime notice</div>
+              </div>
+              <div class="tpl-card" onclick="applyTemplate('promo')" id="tpl-promo">
+                <div class="tpl-icon">🎁</div>
+                <div class="tpl-name">Promotion</div>
+                <div class="tpl-desc">Bonus announcement</div>
+              </div>
+              <div class="tpl-card" onclick="applyTemplate('reset')" id="tpl-reset">
+                <div class="tpl-icon">🔑</div>
+                <div class="tpl-name">Account Notice</div>
+                <div class="tpl-desc">Account update info</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBJECT -->
+          <div class="field-row">
+            <div class="field-label">SUBJECT <span class="field-required">*</span></div>
+            <input class="field-input" id="mail-subject" placeholder="Enter email subject…"/>
+          </div>
+
+          <!-- BODY -->
+          <div class="field-row">
+            <div class="field-label">MESSAGE BODY <span class="field-required">*</span></div>
+            <textarea class="field-textarea" id="mail-body" placeholder="Write your message here…&#10;&#10;You can use plain text or simple HTML formatting."></textarea>
+          </div>
+
+          <!-- SEND ROW -->
+          <div class="send-row">
+            <div class="send-info">
+              Sending as <span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f39d9c8196839f8ab39692819d859a92879c81dd909c9e">[email&#160;protected]</a></span> via EmailJS
+            </div>
+            <button class="send-btn" id="send-btn" onclick="sendMail()">
+              SEND MAIL <span class="btn-icon">✈</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- SENT VIEW -->
+    <div class="view" id="view-sent">
+      <div class="sent-header">
+        <div class="sent-title">📤 SENT MAILS</div>
+        <button class="clear-btn" onclick="clearLog()">🗑 Clear Log</button>
+      </div>
+      <div id="sent-list"></div>
+    </div>
+
+  </div><!-- /right-panel -->
+</div><!-- /layout -->
+
+<div id="toast"></div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ═══════════════════════════════════════════════════════
+// EMAILJS CONFIG — your credentials
+// ═══════════════════════════════════════════════════════
+const EJS_SERVICE_ID  = 'no-reply.earnaviator.co';
+const EJS_TEMPLATE_ID = 'template_otlvr7t';
+const EJS_PUBLIC_KEY  = 'HidyVZauu-6hTm7rq';
+
+// ═══════════════════════════════════════════════════════
+// ADMIN CREDENTIALS
+// ═══════════════════════════════════════════════════════
+const ADMIN_USER = 'sufiyan';
+const ADMIN_PASS = 'admin123';
+
+// ═══════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem('ev_users')) || {}; } catch { return {}; }
+}
+function getSentLog() {
+  try { return JSON.parse(localStorage.getItem('ev_mail_log')) || []; } catch { return []; }
+}
+function saveSentLog(l) { localStorage.setItem('ev_mail_log', JSON.stringify(l)); }
+function isAdminLogged() { return sessionStorage.getItem('ev_mail_admin') === '1'; }
+
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'error' ? '#c62828' : type === 'warn' ? '#e65100' : '#0a4a6b';
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.display = 'none', 4000);
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════
+function doAdminLogin() {
+  const u = document.getElementById('a-user').value.trim().toLowerCase();
+  const p = document.getElementById('a-pass').value;
+  if (u !== ADMIN_USER || p !== ADMIN_PASS) {
+    const e = document.getElementById('auth-error');
+    e.textContent = 'Invalid admin credentials'; e.style.display = 'block';
+    return;
+  }
+  sessionStorage.setItem('ev_mail_admin', '1');
+  document.getElementById('auth-overlay').style.display = 'none';
+  emailjs.init(EJS_PUBLIC_KEY);
+  _lastUserSnap = localStorage.getItem('ev_users') || '{}';
+  initPanel();
+  startMailAutoRefresh();
+}
+
+function doLogout() {
+  sessionStorage.removeItem('ev_mail_admin');
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+function initPanel() {
+  populateUserDropdown();
+  updateStats();
+  renderSentLog();
+}
+
+function populateUserDropdown() {
+  const users = getUsers();
+  const sel = document.getElementById('to-user-select');
+  const names = Object.keys(users);
+  sel.innerHTML = '<option value="">— Select a user —</option>';
+  names.forEach(name => {
+    const u = users[name];
+    const opt = document.createElement('option');
+    opt.value = u.email || name;
+    opt.dataset.name = name;
+    opt.textContent = `${name} (${u.email || 'no email'}) — ${u.balance} coins`;
+    sel.appendChild(opt);
+  });
+  document.getElementById('broadcast-count').textContent = names.length;
+  document.getElementById('stat-users').textContent = names.length;
+}
+
+function updateStats() {
+  const log = getSentLog();
+  document.getElementById('stat-sent').textContent = log.length;
+  document.getElementById('stat-broadcast').textContent = log.filter(m => m.type === 'broadcast').length;
+  document.getElementById('sent-count-badge').textContent = log.length;
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'sent') renderSentLog();
+}
+
+// ═══════════════════════════════════════════════════════
+// TO TYPE TOGGLE
+// ═══════════════════════════════════════════════════════
+let toType = 'specific';
+function setToType(type) {
+  toType = type;
+  document.getElementById('tab-specific').classList.toggle('active', type === 'specific');
+  document.getElementById('tab-broadcast').classList.toggle('active', type === 'broadcast');
+  document.getElementById('to-specific-wrap').style.display = type === 'specific' ? '' : 'none';
+  document.getElementById('to-broadcast-wrap').style.display = type === 'broadcast' ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+// TEMPLATES
+// ═══════════════════════════════════════════════════════
+const TEMPLATES = {
+  welcome: {
+    subject: '🎉 Welcome to EarnViator!',
+    body: `Hi there,
+
+Welcome to EarnViator — your virtual crash game platform!
+
+Your account has been successfully created. Here's what you need to know:
+
+✈ Head over to the Game page to start playing
+🪙 Your starter coins have been added to your wallet
+📋 Check Terms & Conditions for platform rules
+
+If you have any questions, reply to this email.
+
+Fly smart,
+— EarnViator Team`
+  },
+  coins: {
+    subject: '🪙 Coins Added to Your EarnViator Wallet',
+    body: `Hi,
+
+Great news! Virtual coins have been credited to your EarnViator wallet by the admin.
+
+🪙 Your updated balance is now reflected in your wallet at the top-right corner of the game.
+
+Log in and start playing now:
+→ earnviator.vercel.app
+
+— EarnViator Team`
+  },
+  warning: {
+    subject: '⚠️ Important Notice — EarnViator Account',
+    body: `Hi,
+
+We have noticed unusual activity or a policy violation on your EarnViator account.
+
+Please review our Terms & Conditions and ensure your usage complies with platform rules.
+
+Continued violations may result in account suspension or coin deduction by the admin.
+
+If you believe this is a mistake, please contact us.
+
+— EarnViator Admin`
+  },
+  maintenance: {
+    subject: '🔧 Scheduled Maintenance — EarnViator',
+    body: `Hi,
+
+EarnViator will be undergoing scheduled maintenance soon.
+
+During this period, the platform may be temporarily unavailable. We apologize for any inconvenience.
+
+We'll be back up shortly with improvements and updates.
+
+Thank you for your patience.
+
+— EarnViator Team`
+  },
+  promo: {
+    subject: '🎁 Special Bonus Promotion — EarnViator',
+    body: `Hi,
+
+🎁 We're running a special promotion on EarnViator!
+
+Bonus virtual coins are being distributed to active players. Log in now to claim your coins and take advantage of this limited-time offer.
+
+→ earnviator.vercel.app
+
+Good luck, and fly smart! ✈
+
+— EarnViator Team`
+  },
+  reset: {
+    subject: '🔑 Account Notice — EarnViator',
+    body: `Hi,
+
+This is an important notice regarding your EarnViator account.
+
+Your account details or permissions have been updated by the admin. Please log in to review your current balance and transaction history.
+
+If you did not request any changes, please contact us immediately.
+
+— EarnViator Admin`
+  }
+};
+
+let selectedTemplate = null;
+function applyTemplate(key) {
+  // Deselect all
+  document.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('selected'));
+  if (selectedTemplate === key) { selectedTemplate = null; return; }
+
+  selectedTemplate = key;
+  document.getElementById('tpl-' + key).classList.add('selected');
+  const tpl = TEMPLATES[key];
+  document.getElementById('mail-subject').value = tpl.subject;
+  document.getElementById('mail-body').value = tpl.body;
+}
+
+// ═══════════════════════════════════════════════════════
+// SEND MAIL
+// ═══════════════════════════════════════════════════════
+async function sendMail() {
+  const subject = document.getElementById('mail-subject').value.trim();
+  const body    = document.getElementById('mail-body').value.trim();
+
+  if (!subject) { toast('Please enter a subject', 'error'); return; }
+  if (!body)    { toast('Please write a message', 'error'); return; }
+
+  const users = getUsers();
+  const userList = Object.entries(users);
+
+  let recipients = [];
+  if (toType === 'broadcast') {
+    recipients = userList
+      .filter(([,u]) => u.email)
+      .map(([name, u]) => ({ name, email: u.email }));
+    if (recipients.length === 0) { toast('No users with email addresses found', 'error'); return; }
+  } else {
+    const sel = document.getElementById('to-user-select');
+    const selectedEmail = sel.value;
+    const selectedName = sel.options[sel.selectedIndex]?.dataset?.name || '';
+    if (!selectedEmail) { toast('Please select a user', 'error'); return; }
+    recipients = [{ name: selectedName, email: selectedEmail }];
+  }
+
+  // Show sending overlay
+  const overlay = document.getElementById('sending-overlay');
+  const sendingText = document.getElementById('sending-text');
+  overlay.style.display = 'flex';
+  document.getElementById('send-btn').disabled = true;
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < recipients.length; i++) {
+    const r = recipients[i];
+    sendingText.textContent = `SENDING ${i + 1} OF ${recipients.length}…`;
+    try {
+      await emailjs.send(EJS_SERVICE_ID, EJS_TEMPLATE_ID, {
+        to_email:   r.email,
+        to_name:    r.name,
+        from_name:  'EarnViator',
+        reply_to:   'noreply@earnviator.com',
+        subject:    subject,
+        message:    body
+      });
+      successCount++;
+    } catch (err) {
+      console.error('EmailJS error for', r.email, err);
+      failCount++;
+    }
+  }
+
+  // Log it
+  const log = getSentLog();
+  log.unshift({
+    id: Date.now(),
+    type: toType,
+    recipients: recipients.map(r => r.email),
+    recipientNames: recipients.map(r => r.name),
+    subject,
+    body,
+    date: new Date().toLocaleString(),
+    successCount,
+    failCount,
+    total: recipients.length
+  });
+  saveSentLog(log);
+
+  overlay.style.display = 'none';
+  document.getElementById('send-btn').disabled = false;
+  updateStats();
+
+  if (failCount === 0) {
+    toast(`✅ Mail sent to ${successCount} recipient${successCount > 1 ? 's' : ''} successfully!`);
+    // Reset form
+    document.getElementById('mail-subject').value = '';
+    document.getElementById('mail-body').value = '';
+    document.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('selected'));
+    selectedTemplate = null;
+  } else if (successCount > 0) {
+    toast(`⚠️ Sent: ${successCount}, Failed: ${failCount}`, 'warn');
+  } else {
+    toast('❌ All sends failed. Check your EmailJS credentials.', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// SENT LOG
+// ═══════════════════════════════════════════════════════
+function renderSentLog() {
+  const log = getSentLog();
+  const el = document.getElementById('sent-list');
+  if (log.length === 0) {
+    el.innerHTML = `<div class="empty-sent">
+      <div class="empty-icon">📭</div>
+      <p>No mails sent yet.<br>Compose your first message!</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = log.map(m => {
+    const isBcast = m.type === 'broadcast';
+    const toLabel = isBcast
+      ? `📢 All Users (${m.total})`
+      : m.recipientNames?.[0] || m.recipients?.[0] || '—';
+    const statusColor = m.failCount === 0 ? '#2ec27e' : m.successCount > 0 ? '#f4a261' : '#e63946';
+    const statusText  = m.failCount === 0 ? `Delivered (${m.successCount})` : `${m.successCount} ok / ${m.failCount} failed`;
+    return `<div class="mail-item">
+      <div class="mail-item-top">
+        <div class="mail-to">To: ${toLabel}</div>
+        <span class="mail-type-badge ${isBcast ? 'badge-broadcast' : 'badge-single'}">
+          ${isBcast ? '📢 BROADCAST' : '👤 DIRECT'}
+        </span>
+      </div>
+      <div class="mail-subject">${m.subject}</div>
+      <div class="mail-preview">${m.body}</div>
+      <div class="mail-meta">
+        <span><span class="mail-status-dot" style="background:${statusColor}"></span>${statusText}</span>
+        <span>🕐 ${m.date}</span>
+        ${!isBcast && m.recipients?.[0] ? `<span>📧 ${m.recipients[0]}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearLog() {
+  if (!confirm('Clear all sent mail history?')) return;
+  saveSentLog([]);
+  updateStats();
+  renderSentLog();
+  toast('Mail log cleared', 'warn');
+}
+
+// BOOT -- live auto-refresh so new users appear instantly
+let _lastUserSnap = '';
+
+function startMailAutoRefresh() {
+  setInterval(() => {
+    if (!isAdminLogged()) return;
+    const current = localStorage.getItem('ev_users') || '{}';
+    if (current !== _lastUserSnap) {
+      _lastUserSnap = current;
+      populateUserDropdown();
+      updateStats();
+      if (document.getElementById('view-sent').classList.contains('active')) {
+        renderSentLog();
+      }
+    }
+  }, 1500);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('a-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doAdminLogin();
+  });
+
+  if (isAdminLogged()) {
+    document.getElementById('auth-overlay').style.display = 'none';
+    emailjs.init(EJS_PUBLIC_KEY);
+    _lastUserSnap = localStorage.getItem('ev_users') || '{}';
+    initPanel();
+    startMailAutoRefresh();
+  }
+});
+</script>
+</body>
+</html>

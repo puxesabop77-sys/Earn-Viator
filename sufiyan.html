@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EarnViator — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --red:#e63946; --orange:#f4a261; --green:#2ec27e;
+    --bg:#0b0c10; --bg2:#13141a; --bg3:#1c1d26;
+    --border:rgba(255,255,255,0.07); --text:#e8e8f0; --muted:#6b7080;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh}
+
+  /* AUTH */
+  #auth-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px}
+  .auth-box{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:36px 32px;width:100%;max-width:360px}
+  .auth-title{font-family:'Orbitron',sans-serif;font-size:18px;text-align:center;margin-bottom:4px;color:var(--red)}
+  .auth-sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:24px}
+  .form-label{font-size:11px;color:var(--muted);letter-spacing:1px;font-weight:700;display:block;margin-bottom:6px}
+  .form-group{margin-bottom:14px}
+  .form-input{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;transition:border .2s}
+  .form-input:focus{border-color:rgba(230,57,70,.5)}
+  .btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,var(--red),#c1121f);border:none;border-radius:10px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer}
+  .btn-primary:hover{opacity:.88}
+  .error-msg{background:rgba(230,57,70,.15);border:1px solid rgba(230,57,70,.3);color:#ff6b7a;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+
+  /* LAYOUT */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+  .topbar-logo{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:var(--red)}
+  .topbar-badge{background:rgba(230,57,70,.15);border:1px solid rgba(230,57,70,.3);color:var(--red);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:1px}
+  .logout-btn{padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;transition:all .2s}
+  .logout-btn:hover{color:var(--red);border-color:var(--red)}
+
+  .content{padding:24px;max-width:960px;margin:0 auto}
+  .section-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1.5px;margin-bottom:14px}
+
+  /* STATS */
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+  .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center}
+  .stat-label{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:8px}
+  .stat-val{font-family:'Orbitron',sans-serif;font-size:30px;font-weight:900;color:var(--orange)}
+
+  /* PENDING REQUESTS */
+  .pending-panel{background:var(--bg2);border:1px solid rgba(244,162,97,.3);border-radius:14px;padding:22px;margin-bottom:24px}
+  .pending-title{font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:16px;font-size:15px;display:flex;align-items:center;gap:10px}
+  .pending-badge{background:rgba(230,57,70,.2);border:1px solid rgba(230,57,70,.3);color:var(--red);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:900}
+  .pending-empty{color:var(--muted);font-size:14px;padding:20px;text-align:center}
+  .req-row{display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg3);border-radius:10px;margin-bottom:8px;flex-wrap:wrap}
+  .req-user{font-weight:700;font-size:15px;flex:1;min-width:100px}
+  .req-amount{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:var(--orange);min-width:80px}
+  .req-note{color:var(--muted);font-size:12px;flex:2;min-width:120px}
+  .req-date{color:var(--muted);font-size:11px;min-width:80px;text-align:right}
+  .req-actions{display:flex;gap:8px;margin-left:auto}
+  .approve-btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;background:linear-gradient(135deg,var(--green),#1a9e5a);color:#fff;transition:opacity .2s}
+  .approve-btn:hover{opacity:.85}
+  .reject-btn{padding:8px 16px;border:1px solid rgba(230,57,70,.3);border-radius:8px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;background:rgba(230,57,70,.1);color:var(--red);transition:all .2s}
+  .reject-btn:hover{background:rgba(230,57,70,.2)}
+
+  /* SEND COINS FORM */
+  .manage-panel{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:24px}
+  .manage-title{font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:16px;font-size:15px}
+  .manage-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .manage-field{flex:1;min-width:130px}
+  .manage-label{font-size:11px;color:var(--muted);letter-spacing:1px;font-weight:700;display:block;margin-bottom:6px}
+  .manage-input{width:100%;padding:10px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;transition:border .2s}
+  .manage-input:focus{border-color:rgba(244,162,97,.4)}
+  .manage-select{width:100%;padding:10px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;cursor:pointer}
+  .apply-btn{padding:11px 24px;border:none;border-radius:9px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;transition:opacity .2s;white-space:nowrap}
+  .apply-btn:hover{opacity:.85}
+  .btn-add{background:linear-gradient(135deg,var(--green),#1a9e5a);color:#fff}
+  .btn-deduct{background:linear-gradient(135deg,var(--red),#c1121f);color:#fff}
+
+  /* USER TABLE */
+  .table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px}
+  table{width:100%;border-collapse:collapse}
+  th{padding:12px 16px;text-align:left;font-size:11px;color:var(--muted);letter-spacing:1px;font-weight:700;border-bottom:1px solid var(--border)}
+  td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);font-size:14px;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  .balance-cell{font-family:'Orbitron',sans-serif;font-weight:900;color:var(--orange)}
+  .quick-add{padding:5px 10px;border:none;border-radius:6px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;margin-right:4px;transition:opacity .2s}
+  .quick-add:hover{opacity:.8}
+  .qa-plus{background:rgba(46,194,126,.2);color:var(--green);border:1px solid rgba(46,194,126,.3)}
+  .qa-minus{background:rgba(230,57,70,.2);color:var(--red);border:1px solid rgba(230,57,70,.3)}
+  .empty-state{padding:40px;text-align:center;color:var(--muted)}
+  .new-badge{display:inline-block;background:rgba(46,194,126,.15);border:1px solid rgba(46,194,126,.3);color:var(--green);font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:6px;letter-spacing:.5px}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:28px;right:24px;z-index:9999;padding:13px 20px;border-radius:10px;font-size:14px;font-weight:700;color:#fff;display:none;animation:slideup .3s ease;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+  @keyframes slideup{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#2a2b35;border-radius:3px}
+
+  /* PROFIT CHART */
+  .profit-bar{height:6px;border-radius:3px;background:var(--bg3);overflow:hidden;margin-top:6px}
+  .profit-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--orange));transition:width .5s}
+  .profit-label{font-size:11px;color:var(--muted);margin-top:3px}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-title">⚙ ADMIN LOGIN</div>
+    <div class="auth-sub">EarnViator Admin Panel — Authorized Access Only</div>
+    <div id="auth-error" class="error-msg"></div>
+    <div class="form-group">
+      <label class="form-label">ADMIN USERNAME</label>
+      <input class="form-input" id="a-user" placeholder="Username" autocomplete="off"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">PASSWORD</label>
+      <input class="form-input" id="a-pass" type="password" placeholder="Password"/>
+    </div>
+    <button class="btn-primary" onclick="doAdminLogin()">LOGIN TO ADMIN</button>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="topbar-logo">✈ EARNVIATOR</div>
+    <div class="topbar-badge">⚙ ADMIN PANEL</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button class="logout-btn" onclick="window.open('EarnViator.html','_blank')" style="color:var(--orange);border-color:rgba(244,162,97,.3)">🎮 View Game</button>
+    <button class="logout-btn" onclick="doLogout()">⬅ Logout</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- Stats -->
+  <div class="section-title" style="margin-top:8px">OVERVIEW</div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">TOTAL USERS</div>
+      <div class="stat-val" id="stat-users">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">COINS IN CIRCULATION</div>
+      <div class="stat-val" id="stat-coins">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">TOTAL TRANSACTIONS</div>
+      <div class="stat-val" id="stat-tx">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">PENDING APPROVALS</div>
+      <div class="stat-val" id="stat-pending" style="color:var(--red)">0</div>
+    </div>
+  </div>
+
+  <!-- Pending Coin Requests -->
+  <div class="section-title">PENDING COIN REQUESTS</div>
+  <div class="pending-panel">
+    <div class="pending-title">
+      ⏳ Awaiting Admin Approval
+      <span class="pending-badge" id="pending-count-badge">0</span>
+    </div>
+    <div id="pending-list"><div class="pending-empty">No pending requests</div></div>
+  </div>
+
+  <!-- Send Coins (Manual) -->
+  <div class="manage-panel">
+    <div class="manage-title">⚡ MANUALLY MANAGE USER BALANCE</div>
+    <div class="manage-row">
+      <div class="manage-field">
+        <label class="manage-label">USERNAME</label>
+        <input class="manage-input" id="m-user" placeholder="Enter username" autocomplete="off"/>
+      </div>
+      <div class="manage-field" style="max-width:140px">
+        <label class="manage-label">AMOUNT</label>
+        <input class="manage-input" id="m-amount" type="number" placeholder="e.g. 500" min="1"/>
+      </div>
+      <div class="manage-field" style="max-width:180px">
+        <label class="manage-label">NOTE (optional)</label>
+        <input class="manage-input" id="m-note" placeholder="Reason" autocomplete="off"/>
+      </div>
+      <div class="manage-field" style="max-width:160px">
+        <label class="manage-label">ACTION</label>
+        <select class="manage-select" id="m-action">
+          <option value="add">➕ Add Coins</option>
+          <option value="deduct">➖ Deduct Coins</option>
+        </select>
+      </div>
+      <div>
+        <label class="manage-label" style="visibility:hidden">GO</label>
+        <button class="apply-btn btn-add" id="apply-btn" onclick="applyAction()">APPLY</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Table -->
+  <div class="section-title">ALL USERS</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>USERNAME</th>
+          <th>EMAIL</th>
+          <th>BALANCE</th>
+          <th>WIN/LOSS STATS</th>
+          <th>TRANSACTIONS</th>
+          <th>QUICK ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody id="user-tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const ADMIN_USER = 'sufiyan';
+const ADMIN_PASS = 'admin123';
+
+// ── DATA ───────────────────────────────────────────────
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem('ev_users')) || {}; } catch { return {}; }
+}
+function saveUsers(u) { localStorage.setItem('ev_users', JSON.stringify(u)); }
+function getPendingRequests() {
+  try { return JSON.parse(localStorage.getItem('ev_pending_requests')) || []; } catch { return []; }
+}
+function savePendingRequests(r) { localStorage.setItem('ev_pending_requests', JSON.stringify(r)); }
+function isAdminLogged() { return sessionStorage.getItem('ev_admin') === '1'; }
+
+// ── TOAST ──────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='error' ? '#c62828' : type==='warn' ? '#e65100' : '#1b5e20';
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.display='none', 3000);
+}
+
+// ── AUTH ───────────────────────────────────────────────
+function doAdminLogin() {
+  const u = document.getElementById('a-user').value.trim().toLowerCase();
+  const p = document.getElementById('a-pass').value;
+  if (u !== ADMIN_USER || p !== ADMIN_PASS) {
+    const e = document.getElementById('auth-error');
+    e.textContent = 'Invalid admin credentials';
+    e.style.display = 'block';
+    return;
+  }
+  sessionStorage.setItem('ev_admin', '1');
+  document.getElementById('auth-overlay').style.display = 'none';
+  _lastUserSnapshot   = localStorage.getItem('ev_users') || '{}';
+  _lastPendingSnapshot = localStorage.getItem('ev_pending_requests') || '[]';
+  renderAll();
+  startAutoRefresh();
+}
+
+function doLogout() {
+  sessionStorage.removeItem('ev_admin');
+  location.reload();
+}
+
+// ── PENDING REQUESTS ───────────────────────────────────
+function renderPending() {
+  const requests = getPendingRequests();
+  const pending = requests.filter(r => r.status === 'pending');
+  const el = document.getElementById('pending-list');
+  const badge = document.getElementById('pending-count-badge');
+  const statPending = document.getElementById('stat-pending');
+
+  badge.textContent = pending.length;
+  statPending.textContent = pending.length;
+
+  if (pending.length === 0) {
+    el.innerHTML = '<div class="pending-empty">✅ No pending requests — all caught up!</div>';
+    return;
+  }
+
+  el.innerHTML = pending.map((r, idx) => `
+    <div class="req-row" id="req-${r.id}">
+      <div class="req-user">👤 ${r.username}</div>
+      <div class="req-amount">+${r.amount} 🪙</div>
+      <div class="req-note">${r.note || 'Coin top-up request'}</div>
+      <div class="req-date">${r.date}</div>
+      <div class="req-actions">
+        <button class="approve-btn" onclick="approveRequest('${r.id}')">✅ Approve</button>
+        <button class="reject-btn" onclick="rejectRequest('${r.id}')">✗ Reject</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function approveRequest(id) {
+  const requests = getPendingRequests();
+  const req = requests.find(r => r.id === id);
+  if (!req) return;
+
+  const users = getUsers();
+  if (!users[req.username]) { toast(`User "${req.username}" not found`, 'error'); return; }
+
+  // Credit the coins — this reflects immediately on user's wallet
+  users[req.username].balance += req.amount;
+  users[req.username].transactions = users[req.username].transactions || [];
+  users[req.username].transactions.unshift({
+    type: 'credit',
+    amount: req.amount,
+    note: `Admin approved: ${req.note || 'Coin top-up'}`,
+    date: new Date().toLocaleDateString()
+  });
+  saveUsers(users);
+
+  req.status = 'approved';
+  req.approvedAt = new Date().toLocaleDateString();
+  savePendingRequests(requests);
+
+  toast(`✅ Approved! +${req.amount} coins added to ${req.username}`);
+  renderAll();
+}
+
+function rejectRequest(id) {
+  const requests = getPendingRequests();
+  const req = requests.find(r => r.id === id);
+  if (!req) return;
+
+  req.status = 'rejected';
+  req.rejectedAt = new Date().toLocaleDateString();
+  savePendingRequests(requests);
+
+  toast(`Request from ${req.username} rejected`, 'warn');
+  renderAll();
+}
+
+// ── USER TABLE ─────────────────────────────────────────
+function renderUsers() {
+  const users = getUsers();
+  const all = Object.entries(users);
+  const totalCoins = all.reduce((s,[,u])=>s+u.balance,0);
+  const totalTx = all.reduce((s,[,u])=>s+(u.transactions?.length||0),0);
+
+  document.getElementById('stat-users').textContent = all.length;
+  document.getElementById('stat-coins').textContent = totalCoins;
+  document.getElementById('stat-tx').textContent = totalTx;
+
+  const tbody = document.getElementById('user-tbody');
+  if (all.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No users registered yet</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = all.map(([name, u]) => {
+    const txs = u.transactions || [];
+    const wins = txs.filter(t => t.type === 'win').reduce((s,t)=>s+t.amount,0);
+    const losses = txs.filter(t => t.type === 'loss').reduce((s,t)=>s+t.amount,0);
+    const total = wins + losses;
+    const winPct = total > 0 ? Math.round(wins / total * 100) : 0;
+    const isNew = u.isNewUser === true;
+    return `<tr>
+      <td style="font-weight:700">${name}${isNew ? '<span class="new-badge">NEW</span>' : ''}</td>
+      <td style="color:var(--muted)">${u.email||'—'}</td>
+      <td class="balance-cell">${u.balance}</td>
+      <td style="min-width:130px">
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:#2ec27e">W: ${wins}</span>
+          <span style="color:#e63946">L: ${losses}</span>
+          <span style="color:var(--muted)">${winPct}%</span>
+        </div>
+        <div class="profit-bar"><div class="profit-fill" style="width:${winPct}%"></div></div>
+        <div class="profit-label">${total > 0 ? `${winPct}% win rate` : 'No games yet'}</div>
+      </td>
+      <td style="color:var(--muted)">${txs.length}</td>
+      <td>
+        <button class="quick-add qa-plus" onclick="quickAction('${name}',100,'add')">+100</button>
+        <button class="quick-add qa-plus" onclick="quickAction('${name}',500,'add')">+500</button>
+        <button class="quick-add qa-minus" onclick="quickAction('${name}',100,'deduct')">-100</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAll() {
+  renderUsers();
+  renderPending();
+}
+
+// ── QUICK / MANUAL ACTIONS ─────────────────────────────
+function quickAction(username, amount, type) {
+  const users = getUsers();
+  if (!users[username]) { toast('User not found','error'); return; }
+  if (type === 'add') {
+    users[username].balance += amount;
+    users[username].transactions = users[username].transactions || [];
+    users[username].transactions.unshift({ type:'credit', amount, note:`Admin +${amount}`, date:new Date().toLocaleDateString() });
+    toast(`+${amount} coins added to ${username} — reflected on wallet instantly`);
+  } else {
+    users[username].balance = Math.max(0, users[username].balance - amount);
+    users[username].transactions = users[username].transactions || [];
+    users[username].transactions.unshift({ type:'debit', amount, note:`Admin -${amount}`, date:new Date().toLocaleDateString() });
+    toast(`-${amount} coins deducted from ${username}`, 'warn');
+  }
+  saveUsers(users);
+  renderAll();
+}
+
+function applyAction() {
+  const username = document.getElementById('m-user').value.trim().toLowerCase();
+  const amount = parseInt(document.getElementById('m-amount').value);
+  const note = document.getElementById('m-note').value.trim() || '';
+  const type = document.getElementById('m-action').value;
+
+  if (!username) { toast('Enter a username','error'); return; }
+  if (!amount || amount < 1) { toast('Enter a valid amount','error'); return; }
+
+  const users = getUsers();
+  if (!users[username]) { toast(`User "${username}" not found`,'error'); return; }
+
+  const users2 = getUsers();
+  if (type === 'add') {
+    users2[username].balance += amount;
+    users2[username].transactions = users2[username].transactions || [];
+    users2[username].transactions.unshift({ type:'credit', amount, note: note || `Admin added ${amount}`, date:new Date().toLocaleDateString() });
+    toast(`✅ +${amount} coins sent to ${username} — wallet updated`);
+  } else {
+    users2[username].balance = Math.max(0, users2[username].balance - amount);
+    users2[username].transactions = users2[username].transactions || [];
+    users2[username].transactions.unshift({ type:'debit', amount, note: note || `Admin deducted ${amount}`, date:new Date().toLocaleDateString() });
+    toast(`-${amount} coins deducted from ${username}`, 'warn');
+  }
+  saveUsers(users2);
+
+  document.getElementById('m-user').value = '';
+  document.getElementById('m-amount').value = '';
+  document.getElementById('m-note').value = '';
+  renderAll();
+}
+
+// ── AUTO REFRESH — watches localStorage for any change ──
+let _lastUserSnapshot = '';
+let _lastPendingSnapshot = '';
+
+function startAutoRefresh() {
+  setInterval(() => {
+    if (!isAdminLogged()) return;
+
+    // Compare raw localStorage strings — re-render only when something changed
+    const currentUsers   = localStorage.getItem('ev_users') || '{}';
+    const currentPending = localStorage.getItem('ev_pending_requests') || '[]';
+
+    if (currentUsers !== _lastUserSnapshot || currentPending !== _lastPendingSnapshot) {
+      _lastUserSnapshot   = currentUsers;
+      _lastPendingSnapshot = currentPending;
+      renderAll();
+
+      // Flash the "ALL USERS" title briefly so admin notices the update
+      const titles = document.querySelectorAll('.section-title');
+      titles.forEach(t => {
+        t.style.color = 'var(--green)';
+        setTimeout(() => t.style.color = '', 800);
+      });
+    }
+  }, 1500); // check every 1.5 seconds — fast enough to feel live
+}
+
+// ── INIT ───────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('m-action');
+  const btn = document.getElementById('apply-btn');
+  if (sel) sel.addEventListener('change', () => {
+    btn.className = 'apply-btn ' + (sel.value==='add' ? 'btn-add' : 'btn-deduct');
+  });
+
+  document.getElementById('a-pass').addEventListener('keydown', e => { if(e.key==='Enter') doAdminLogin(); });
+
+  if (isAdminLogged()) {
+    document.getElementById('auth-overlay').style.display = 'none';
+    // Seed snapshots before first render
+    _lastUserSnapshot   = localStorage.getItem('ev_users') || '{}';
+    _lastPendingSnapshot = localStorage.getItem('ev_pending_requests') || '[]';
+    renderAll();
+    startAutoRefresh();
+  }
+});
+</script>
+</body>
+</html>
